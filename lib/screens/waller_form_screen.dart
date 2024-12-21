@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
-import 'package:web3dart/web3dart.dart';
+import 'package:http/http.dart' as http;
 
 class WalletFormScreen extends StatefulWidget {
   @override
@@ -10,44 +10,49 @@ class WalletFormScreen extends StatefulWidget {
 class _WalletFormScreenState extends State<WalletFormScreen> {
   final _walletController = TextEditingController();
   String? _walletDetails;
-  late Web3Client _web3Client;
-
-  final String _rpcUrl = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"; // Replace with your Infura Project ID
-
-  @override
-  void initState() {
-    super.initState();
-    _web3Client = Web3Client(_rpcUrl, Client());
-  }
+  List<dynamic> _ownedPokemon = [];
+  String? _error;
 
   Future<void> _fetchWalletDetails() async {
     final walletAddress = _walletController.text.trim();
-    if (walletAddress.isEmpty || !walletAddress.startsWith('0x') || walletAddress.length != 42) {
+    if (walletAddress.isEmpty) {
       setState(() {
-        _walletDetails = "Please enter a valid wallet address.";
+        _error = 'Please enter a valid wallet address.';
+        _walletDetails = null;
+        _ownedPokemon = [];
       });
       return;
     }
 
+    final url = "http://192.168.26.172:8000/balance/$walletAddress";
+
     try {
-      final EthereumAddress ethAddress = EthereumAddress.fromHex(walletAddress);
+      final response = await http.get(Uri.parse(url));
 
-      // Fetch balance
-      final EtherAmount balance = await _web3Client.getBalance(ethAddress);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-      // Dummy NFTs Owned for now
-      const int dummyNftsOwned = 3;
-
-      setState(() {
-        _walletDetails = '''
-          Wallet Address: $walletAddress
-          Balance: ${balance.getValueInUnit(EtherUnit.ether)} ETH
-          NFTs Owned: $dummyNftsOwned
-        ''';
-      });
+        setState(() {
+          _walletDetails = '''
+Wallet Address: ${data['address']}
+Balance: ${data['balance']} ETH
+NFTs Owned: ${data['nfts'].length}
+''';
+          _ownedPokemon = data['nfts'];
+          _error = null;
+        });
+      } else {
+        setState(() {
+          _error = 'Error fetching wallet details: ${response.statusCode} ${response.reasonPhrase}';
+          _walletDetails = null;
+          _ownedPokemon = [];
+        });
+      }
     } catch (e) {
       setState(() {
-        _walletDetails = "Error fetching wallet details: $e";
+        _error = 'Error fetching wallet details: $e';
+        _walletDetails = null;
+        _ownedPokemon = [];
       });
     }
   }
@@ -80,7 +85,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Wallet Address',
-                hintText: 'Enter your wallet address (42 characters starting with 0x)',
+                hintText: 'Enter your wallet address',
               ),
             ),
             SizedBox(height: 20),
@@ -94,21 +99,72 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
               child: Text('Fetch Details'),
             ),
             SizedBox(height: 20),
+            if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: Colors.red, fontSize: 16),
+              ),
             if (_walletDetails != null)
               Container(
+                width: double.infinity,
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.black, width: 1),
                 ),
-                child: Text(
-                  _walletDetails!,
-                  style: TextStyle(fontSize: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Wallet Details:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      _walletDetails!,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
                 ),
               ),
+            if (_ownedPokemon.isNotEmpty) ...[
+              SizedBox(height: 20),
+              Text(
+                'Owned Pokémon:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: _ownedPokemon.length,
+                itemBuilder: (context, index) {
+                  final pokemon = _ownedPokemon[index];
+                  return _buildPokemonCard(pokemon);
+                },
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPokemonCard(dynamic pokemon) {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundImage: NetworkImage(pokemon['nft_image_location']),
+        ),
+        title: Text(
+          pokemon['pokemon_name'],
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text('Type: ${pokemon['pokemon_type']}'),
       ),
     );
   }
