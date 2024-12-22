@@ -16,14 +16,14 @@ class HomeScreen extends StatelessWidget {
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/wallet');
+              Navigator.pushNamed(context, '/connect_wallet');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,
               side: BorderSide(color: Colors.black, width: 2),
             ),
-            child: Text('CONNECT WALLET'),
+            child: Text('FETCH DETAILS '),
           ),
         ],
       ),
@@ -68,12 +68,6 @@ class HomeScreen extends StatelessWidget {
                           Colors.teal,
                           () => Navigator.pushNamed(context, '/pokemon_cards'),
                         ),
-                        _buildActionButton(
-                          context,
-                          'USER STATS',
-                          Colors.yellow,
-                          () => Navigator.pushNamed(context, '/stats'),
-                        ),
                       ],
                     );
                   } else {
@@ -92,13 +86,6 @@ class HomeScreen extends StatelessWidget {
                           'VIEW CARDS',
                           Colors.teal,
                           () => Navigator.pushNamed(context, '/pokemon_cards'),
-                        ),
-                        SizedBox(height: 8),
-                        _buildActionButton(
-                          context,
-                          'USER STATS',
-                          Colors.yellow,
-                          () => Navigator.pushNamed(context, '/stats'),
                         ),
                       ],
                     );
@@ -124,6 +111,52 @@ class HomeScreen extends StatelessWidget {
                       'Squirtle',
                       'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png'),
                 ],
+              ),
+              SizedBox(height: 32),
+              // Add Connect Wallet Button
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/wallet');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  side: BorderSide(color: Colors.black, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'CONNECT WALLET',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16), // Add spacing between buttons
+              // Add Contact Us Button
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/contact_us');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  side: BorderSide(color: Colors.black, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'CONTACT US',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),

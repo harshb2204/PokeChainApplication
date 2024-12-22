@@ -8,29 +8,30 @@ class WalletFormScreen extends StatefulWidget {
 }
 
 class _WalletFormScreenState extends State<WalletFormScreen> {
-  final _walletController = TextEditingController();
   String? _walletDetails;
   List<dynamic> _ownedPokemon = [];
   String? _error;
+  bool _isLoading = false;
 
   Future<void> _fetchWalletDetails() async {
-    final walletAddress = _walletController.text.trim();
-    if (walletAddress.isEmpty) {
-      setState(() {
-        _error = 'Please enter a valid wallet address.';
-        _walletDetails = null;
-        _ownedPokemon = [];
-      });
-      return;
-    }
-
-    final url = "http://192.168.26.172:8000/balance/$walletAddress";
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     try {
+      // Hardcoded URL and token
+      final url =
+          "http://192.168.218.68:8000/eth?userToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3YWxsZXRfYWRkcmVzcyI6IjB4RjM5ODI3MDgxOTUxQjFiOEI5ODk2MDkyNTJGREUyMDMzMzBjQjBlMSIsImVtYWlsIjoia2VkYXJ2YXJ0YWsyMkB2aXQuZWR1IiwiaWF0IjoxNzM0ODMxODg0LCJleHAiOjE3MzU0MzY2ODR9.6NwukLUdX1KhPsGWQMWYxMT6ZaCJ1z_Sj6nuAe19Elc";
+      print('Fetching wallet details from: $url');
+
+      // Make GET request
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
+        // Parse response
         final data = jsonDecode(response.body);
+        print('Response Data: $data');
 
         setState(() {
           _walletDetails = '''
@@ -39,35 +40,29 @@ Balance: ${data['balance']} ETH
 NFTs Owned: ${data['nfts'].length}
 ''';
           _ownedPokemon = data['nfts'];
-          _error = null;
+          _isLoading = false;
         });
       } else {
+        print('Error: ${response.statusCode} ${response.reasonPhrase}');
         setState(() {
           _error = 'Error fetching wallet details: ${response.statusCode} ${response.reasonPhrase}';
-          _walletDetails = null;
-          _ownedPokemon = [];
+          _isLoading = false;
         });
       }
     } catch (e) {
+      print("Error fetching wallet details: $e");
       setState(() {
         _error = 'Error fetching wallet details: $e';
-        _walletDetails = null;
-        _ownedPokemon = [];
+        _isLoading = false;
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _walletController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Connect Wallet'),
+        title: Text('Wallet Details'),
         backgroundColor: Colors.teal,
       ),
       body: Padding(
@@ -75,28 +70,22 @@ NFTs Owned: ${data['nfts'].length}
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Enter Wallet Address',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            TextField(
-              controller: _walletController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Wallet Address',
-                hintText: 'Enter your wallet address',
-              ),
-            ),
-            SizedBox(height: 20),
             ElevatedButton(
               onPressed: _fetchWalletDetails,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
-                foregroundColor: Colors.white,
-                side: BorderSide(color: Colors.black, width: 2),
+                minimumSize: Size(double.infinity, 50),
               ),
-              child: Text('Fetch Details'),
+              child: _isLoading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text('Fetch Wallet Details', style: TextStyle(fontSize: 18)),
             ),
             SizedBox(height: 20),
             if (_error != null)
@@ -135,14 +124,14 @@ NFTs Owned: ${data['nfts'].length}
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: _ownedPokemon.length,
-                itemBuilder: (context, index) {
-                  final pokemon = _ownedPokemon[index];
-                  return _buildPokemonCard(pokemon);
-                },
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _ownedPokemon.length,
+                  itemBuilder: (context, index) {
+                    final pokemon = _ownedPokemon[index];
+                    return _buildPokemonCard(pokemon);
+                  },
+                ),
               ),
             ],
           ],
@@ -158,10 +147,12 @@ NFTs Owned: ${data['nfts'].length}
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage: NetworkImage(pokemon['nft_image_location']),
+          backgroundImage: NetworkImage(
+            "http://192.168.218.68:5000${pokemon['nft_image_location']}", // Append base URL if required
+          ),
         ),
         title: Text(
-          pokemon['pokemon_name'],
+          pokemon['pokemon_name'],    
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text('Type: ${pokemon['pokemon_type']}'),
